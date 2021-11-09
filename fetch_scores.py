@@ -29,7 +29,6 @@ def main():
   pathlib.Path(cache).mkdir(exist_ok=True)
   idx = 1
   while fetch_scores_page(cache, idx):
-    return
     idx += 1
     time.sleep(0.5)
 
