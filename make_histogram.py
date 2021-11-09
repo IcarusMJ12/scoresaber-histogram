@@ -1,22 +1,36 @@
 #!/usr/bin/env python3
 
+import argparse
+import glob
 import json
+import sys
 
 import matplotlib.pyplot as plt
 
 
-def populate_bins(pp, idx):
+def populate_bins(cache, pp, idx):
   try:
-    with open(f'cache/{idx}.json') as f:
-      pp += [player['pp'] for player in json.load(f)['players'] if player['pp'] > 0]
+    with open(f'{cache}/{idx}.json') as f:
+      pp += [player['pp'] for player in json.load(f)['players']
+             if player['pp'] > 0]
     return True
   except FileNotFoundError:
     return False
 
 
 def main():
+  default_path = sorted(glob.glob('./*/'))[-1]
+  parser = argparse.ArgumentParser(
+      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+  parser.add_argument('--scale', '-s', default='linear',
+                      choices=('linear', 'log'),
+                      help="scale to use for the 'y' axis")
+  parser.add_argument('DIR', nargs='?', default=default_path,
+                      help='directory containing leaderboard dumps')
+  args = parser.parse_args()
+
   idx, pp = 1, []
-  while populate_bins(pp, idx):
+  while populate_bins(args.DIR, pp, idx):
     idx += 1
   pp.sort()
   bins = int(pp[-1]/100) + 1
