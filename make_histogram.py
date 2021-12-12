@@ -8,6 +8,7 @@ import os
 import sys
 
 import matplotlib.pyplot as plt
+import numpy as np
 
 
 def populate_bins(cache, pp, idx):
@@ -26,7 +27,7 @@ def main():
   parser = argparse.ArgumentParser(
       formatter_class=argparse.ArgumentDefaultsHelpFormatter)
   parser.add_argument('--scale', '-s', default='linear',
-                      choices=('linear', 'log'),
+                      choices=('linear', 'log', 'loglog'),
                       help="scale to use for the 'y' axis")
   parser.add_argument('DIR', nargs='*', default=default_paths,
                       help='directories containing leaderboard dumps')
@@ -37,20 +38,25 @@ def main():
     while populate_bins(path, pp, idx):
       idx += 1
     pp.sort()
-    bins = int(math.ceil(pp[-1]/100))
 
     fig = plt.figure()
     if args.scale == 'linear':
-      plot_linear(fig, bins, pp)
+      plot_linear(fig, pp)
     elif args.scale == 'log':
-      plot_logarithmic(fig, bins, pp)
+      plot_logarithmic(fig, pp)
+    elif args.scale == 'loglog':
+      plot_loglog(fig, pp)
     plt.xlabel('PP')
     plt.ylabel('# Players')
-    fig.text(0.72, 0.78, f'{path}\nPP > 0\nbin size = 100')
+    if args.scale == 'loglog':
+      fig.text(0.72, 0.78, f'{path}\nPP > 0')
+    else:
+      fig.text(0.72, 0.78, f'{path}\nPP > 0\nbin size = 100')
   plt.show()
 
 
-def plot_linear(fig, bins, pp):
+def plot_linear(fig, pp):
+  bins = int(math.ceil(pp[-1]/100))
   pp_less_100 = bisect.bisect_left(pp, 100)
   pp_less_200 = bisect.bisect_left(pp, 200)
   pp_less_300 = bisect.bisect_left(pp, 300)
@@ -92,7 +98,16 @@ def plot_linear(fig, bins, pp):
   ax3.plot([0, 1], [1, 1], transform=ax3.transAxes, **kwargs)
 
 
-def plot_logarithmic(fig, bins, pp):
+def plot_logarithmic(fig, pp):
+  bins = int(math.ceil(pp[-1]/100))
+  plt.title('PP Size Distribution')
+  plt.grid(True)
+  plt.hist(pp, bins=bins, edgecolor='white', linewidth=1, color='black',
+           log=True)
+
+
+def plot_loglog(fig, pp):
+  bins = np.logspace(np.log10(pp[0]),np.log10(pp[-1]), math.ceil(pp[-1]/100))
   plt.title('PP Size Distribution')
   plt.grid(True)
   plt.hist(pp, bins=bins, edgecolor='white', linewidth=1, color='black',
