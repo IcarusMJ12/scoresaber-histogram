@@ -4,6 +4,6 @@ The below is best done in a virtual environment:
 
 ```
 pip install -r requirements.txt
-./fetch_scores.py
+./fetch_scores.py  # or unpack an existing dataset -- you'll need `zstd` for that
 ./make_histogram.py
 ```
