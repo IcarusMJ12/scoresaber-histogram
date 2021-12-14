@@ -11,58 +11,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
-def populate_bins(cache, pp, idx):
-  try:
-    with open(f'{cache}/{idx}.json') as f:
-      pp += [player['pp'] for player in json.load(f)['players']
-             if player['pp'] > 0]
-    return True
-  except FileNotFoundError:
-    return False
-
-
-def main():
-  default_paths = sorted([p for p in next(os.walk('.'))[1]
-                          if not p.startswith('.')])
-  parser = argparse.ArgumentParser(
-      formatter_class=argparse.RawTextHelpFormatter)
-  parser.add_argument('--scale', '-s', default='linear',
-                      choices=('linear', 'log', 'loglog', 'xloglog'),
-                      help='''axes and bucket scaling:
-  linear: default linear scaling for axes and bucket
-  log: log scaling for the y axis
-  loglog: log scaling for the y axis and buckets
-  xloglog: log scaling for both axes and buckets''')
-  parser.add_argument('DIR', nargs='*', default=default_paths,
-                      help='directories containing leaderboard dumps')
-  args = parser.parse_args()
-
-  for path in args.DIR:
-    idx, pp = 1, []
-    while populate_bins(path, pp, idx):
-      idx += 1
-    pp.sort()
-
-    fig = plt.figure()
-    if args.scale == 'linear':
-      plot_linear(fig, pp)
-    elif args.scale == 'log':
-      plot_logarithmic(pp)
-    elif args.scale == 'loglog':
-      plot_loglog(pp)
-    elif args.scale == 'xloglog':
-      plot_xloglog(pp)
-    plt.xlabel('PP')
-    plt.ylabel('# Players')
-    if args.scale == 'xloglog':
-      fig.text(0.16, 0.78, f'{path}\nPP > 0')
-    elif args.scale == 'loglog':
-      fig.text(0.72, 0.78, f'{path}\nPP > 0')
-    else:
-      fig.text(0.72, 0.78, f'{path}\nPP > 0\nbin size = 100')
-  plt.show()
-
-
 def plot_linear(fig, pp):
   bins = int(math.ceil(pp[-1]/100))
   pp_less_100 = bisect.bisect_left(pp, 100)
@@ -73,13 +21,14 @@ def plot_linear(fig, pp):
   ax3_ylim = math.floor((pp_less_300 - pp_less_200)/1000) * 1000
   fig.subplots_adjust(hspace=0.3)
   ax1 = plt.subplot(6, 1, 1)
-  plt.title('PP Size Distribution')
+  plt.title('PP and Rank Distribution')
   plt.grid(True)
   ax2 = plt.subplot(6, 1, 2, sharex=ax1)
   plt.grid(True)
   ax3 = plt.subplot2grid((6, 1), (2,0), rowspan=4, sharex=ax1)
   plt.grid(True)
   ax1.hist(pp, bins=bins, edgecolor='white', linewidth=1, color='black')
+  locs, labels = plt.xticks()
   ax2.hist(pp, bins=bins, edgecolor='white', linewidth=1, color='black')
   ax3.hist(pp, bins=bins, edgecolor='white', linewidth=1, color='black')
 
@@ -104,29 +53,90 @@ def plot_linear(fig, pp):
   ax2.plot([0, 1], [1, 1], transform=ax2.transAxes, **kwargs)
   ax2.plot([0, 1], [0, 0], transform=ax2.transAxes, **kwargs)
   ax3.plot([0, 1], [1, 1], transform=ax3.transAxes, **kwargs)
+  plt.xlabel('PP')
 
+  ax2 = ax1.secondary_xaxis('top')
+  ax2.set_xlabel('Rank')
+  max_rank = len(pp)
+  ax2.set_xticks(locs)
+  ax2.set_xticklabels([(max_rank - np.searchsorted(pp, loc)) for loc in locs])
 
-def plot_logarithmic(pp):
+def plot_logarithmic(fig, pp):
   bins = int(math.ceil(pp[-1]/100))
-  _plot_log(bins, pp)
+  _plot_log(fig, bins, pp)
 
 
-def plot_loglog(pp):
+def plot_loglog(fig, pp):
   bins = np.logspace(np.log10(pp[0]),np.log10(pp[-1]), math.ceil(pp[-1]/100))
-  _plot_log(bins, pp)
+  _plot_log(fig, bins, pp)
 
 
-def plot_xloglog(pp):
+def plot_xloglog(fig, pp):
   bins = np.logspace(np.log10(pp[0]),np.log10(pp[-1]), math.ceil(pp[-1]/100))
   plt.xscale('log')
-  _plot_log(bins, pp)
+  _plot_log(fig, bins, pp)
 
 
-def _plot_log(bins, pp):
+def _plot_log(fig, bins, pp):
   plt.title('PP Size Distribution')
-  plt.grid(True)
-  plt.hist(pp, bins=bins, edgecolor='white', linewidth=1, color='black',
+  ax1 = plt.subplot()
+  ax1.grid(True)
+  plt.xlabel('PP')
+  ax1.hist(pp, bins=bins, edgecolor='white', linewidth=1, color='black',
            log=True)
+  locs, labels = plt.xticks()
+  ax2 = ax1.secondary_xaxis('top')
+  ax2.set_xlabel('Rank')
+  max_rank = len(pp)
+  ax2.set_xticks(locs)
+  ax2.set_xticklabels([(max_rank - np.searchsorted(pp, loc)) for loc in locs])
+
+
+PLOT_MAP = {'linear': plot_linear, 'log': plot_logarithmic,
+            'loglog': plot_loglog, 'xloglog': plot_xloglog}
+
+
+def populate_bins(cache, pp, idx):
+  try:
+    with open(f'{cache}/{idx}.json') as f:
+      players = json.load(f)['players']
+      pp += [player['pp'] for player in players if player['pp'] > 0]
+    return True
+  except FileNotFoundError:
+    return False
+
+
+def main():
+  default_path = sorted([p for p in next(os.walk('.'))[1]
+                         if not p.startswith('.')])[-1]
+  parser = argparse.ArgumentParser(
+      formatter_class=argparse.RawTextHelpFormatter)
+  parser.add_argument('--scale', '-s', default='log',
+                      choices=('linear', 'log', 'loglog', 'xloglog'),
+                      help='''axes and bucket scaling:
+  linear: default linear scaling for axes and bucket
+  log: log scaling for the y axis
+  loglog: log scaling for the y axis and buckets
+  xloglog: log scaling for both axes and buckets''')
+  parser.add_argument('DIR', nargs='?', default=default_path,
+                      help='directory containing leaderboard dumps')
+  args = parser.parse_args()
+
+  idx, pp = 1, []
+  while populate_bins(args.DIR, pp, idx):
+    idx += 1
+  pp.sort()
+
+  fig = plt.figure()
+  PLOT_MAP[args.scale](fig, pp)
+  plt.ylabel('# Players')
+  if args.scale == 'xloglog':
+    fig.text(0.16, 0.78, f'{args.DIR}\nPP > 0')
+  elif args.scale == 'loglog':
+    fig.text(0.72, 0.78, f'{args.DIR}\nPP > 0')
+  else:
+    fig.text(0.72, 0.78, f'{args.DIR}\nPP > 0\nbin size = 100')
+  plt.show()
 
 
 if __name__ == '__main__':
