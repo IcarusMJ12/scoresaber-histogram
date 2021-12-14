@@ -104,7 +104,7 @@ def populate_bins(cache, pp, users, idx):
       pp += [player['pp'] for player in players if player['pp'] > 0]
       for player in players:
         name = player['playerName']
-        if name in names:
+        if name in names and users[name] is None:
           users[name] = player['pp']
     return True
   except FileNotFoundError:
