@@ -7,3 +7,6 @@ pip install -r requirements.txt
 ./fetch_scores.py  # or unpack an existing dataset -- you'll need `zstd` for that
 ./make_histogram.py
 ```
+
+
+![](peepee.png)
