@@ -99,13 +99,13 @@ PLOT_MAP = {'linear': plot_linear, 'log': plot_logarithmic,
 def populate_bins(cache, pp, users, idx):
   try:
     with open(f'{cache}/{idx}.json') as f:
-      names = users.keys()
+      ids = users.keys()
       players = json.load(f)['players']
       pp += [player['pp'] for player in players if player['pp'] > 0]
       for player in players:
-        name = player['playerName']
-        if name in names and users[name] is None:
-          users[name] = player['pp']
+        id_ = player['playerId']
+        if id_ in ids:
+          users[id_] = (player['playerName'], player['pp'], player['rank'])
     return True
   except FileNotFoundError:
     return False
@@ -123,15 +123,14 @@ def main():
   log: log scaling for the y axis
   loglog: log scaling for the y axis and buckets
   xloglog: log scaling for both axes and buckets''')
-  parser.add_argument('--user', '-u', action='append', type=str,
-                      default=['Naysy', 'Bandoot', 'makeUmove', 'cerret'],
-                      help='user to mark in the histogram, can be specified '
-                           'multiple times')
+  parser.add_argument('--user', '-u', action='append', type=str, default=[],
+                      help='scoresaber user id to mark in the histogram, can '
+                           'be specified multiple times')
   parser.add_argument('DIR', nargs='?', default=default_path,
                       help='directory containing leaderboard dumps')
   args = parser.parse_args()
 
-  idx, pp, users = 1, [], dict([(user, None) for user in args.user])
+  idx, pp, users = 1, [], dict([(user, ('', None, 0)) for user in args.user])
   while populate_bins(args.DIR, pp, users, idx):
     idx += 1
   pp.sort()
@@ -146,13 +145,13 @@ def main():
   else:
     fig.text(0.72, 0.78, f'{args.DIR}\nPP > 0\nbin size = 100')
 
-  y = 10000 if args.scale in ('linear', 'log') else 2000
-  for name, user_pp in users.items():
+  y = 7000 if args.scale in ('linear', 'log') else 1000
+  for name, user_pp, rank in users.values():
     if user_pp is None:
       continue
     plt.axvline(user_pp, color='r', lw=1, ls=':')
-    plt.text(user_pp, y, name, rotation=90, verticalalignment='center',
-             color='r')
+    plt.text(user_pp, y, f'{name} ({rank})', rotation=90,
+             verticalalignment='center', color='r')
 
   plt.show()
 
