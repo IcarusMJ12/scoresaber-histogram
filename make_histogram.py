@@ -149,6 +149,8 @@ def main():
   for name, user_pp, rank in users.values():
     if user_pp is None:
       continue
+    if name == 'cerret':
+      name = 'some vegetable'
     plt.axvline(user_pp, color='r', lw=1, ls=':')
     plt.text(user_pp, y, f'{name} ({rank})', rotation=90,
              verticalalignment='center', color='r')
