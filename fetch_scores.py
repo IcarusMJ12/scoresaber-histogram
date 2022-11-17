@@ -30,7 +30,7 @@ def main():
   idx = 1
   while fetch_scores_page(cache, idx):
     idx += 1
-    time.sleep(0.5)
+    time.sleep(0.7)
 
 
 if __name__ == '__main__':
